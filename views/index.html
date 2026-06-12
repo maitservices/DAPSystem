@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="pt-PT" ng-app="DapSystemApp">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DAP System - Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular-route.min.js"></script>
+    
+    <style>
+        /* Pequenos ajustes para transições suaves */
+        .ng-enter { transition: 0.3s linear all; opacity: 0; }
+        .ng-enter.ng-enter-active { opacity: 1; }
+    </style>
+</head>
+<body class="bg-gray-100 flex h-screen overflow-hidden font-sans" ng-controller="MainCtrl">
+
+    <aside class="w-64 bg-[#111827] text-white flex flex-col">
+        <div class="h-16 flex items-center px-6 border-b border-gray-800">
+            <span class="text-xl font-bold flex items-center gap-2">
+                <span class="bg-blue-600 p-1 rounded">⚙️</span> DAP System
+            </span>
+        </div>
+        <nav class="flex-1 px-4 py-6 space-y-2">
+            <a href="#!/inicio" class="block px-4 py-2 rounded text-gray-300 hover:bg-gray-800 hover:text-white transition">🏠 Início</a>
+            <a href="#!/cliente-pj" class="block px-4 py-2 rounded text-gray-300 hover:bg-gray-800 hover:text-white transition">🏢 Cadastro Cliente PJ</a>
+        </nav>
+        <div class="p-4 border-t border-gray-800">
+            <a href="#" class="block px-4 py-2 text-red-400 hover:bg-gray-800 rounded transition">🚪 Sair</a>
+        </div>
+    </aside>
+
+    <div class="flex-1 flex flex-col h-screen">
+        
+        <header class="h-16 bg-white shadow-sm border-b flex items-center justify-between px-6 z-10">
+            <h1 class="text-xl font-semibold text-gray-800">{{ pageTitle }}</h1>
+            
+            <div class="relative">
+                <button ng-click="toggleUserMenu()" class="flex items-center gap-2 text-gray-700 hover:text-blue-600 focus:outline-none">
+                    <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">U</div>
+                    <span class="font-medium">usuario-logado</span>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+
+                <div ng-show="isUserMenuOpen" class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border py-1">
+                    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Configuração</a>
+                    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Perfil</a>
+                    <div class="border-t my-1"></div>
+                    <a href="#" class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50">Logout</a>
+                </div>
+            </div>
+        </header>
+
+        <div ng-show="mensagemGlobal" class="bg-green-500 text-white text-center py-2 px-4 shadow-md font-medium transition-all duration-300">
+            {{ mensagemGlobal }}
+        </div>
+
+        <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-6">
+            <div ng-view></div>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+    <script src="views/cliente-pj.ctrl.js"></script>
+</body>
+</html>
