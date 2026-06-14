@@ -1,0 +1,93 @@
+<div class="bg-white rounded-lg shadow border p-6">
+    
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h2 class="text-xl font-bold text-gray-800">Gestão de Usuários</h2>
+            <p class="text-sm text-gray-500">Controle o acesso ao sistema DAP.</p>
+        </div>
+        
+        <button ng-show="!modoFormulario" ng-click="novoUsuario()" 
+                class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded transition flex items-center gap-2">
+            <span>+</span> Novo Usuário
+        </button>
+        <button ng-show="modoFormulario" ng-click="voltarLista()" 
+                class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-2 px-4 rounded transition">
+            Voltar para Lista
+        </button>
+    </div>
+
+    <div ng-show="!modoFormulario" class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="bg-gray-50 text-gray-600 text-sm border-b">
+                    <th class="py-3 px-4 font-medium">E-mail / Login</th>
+                    <th class="py-3 px-4 font-medium">Status</th>
+                    <th class="py-3 px-4 font-medium">Data de Criação</th>
+                    <th class="py-3 px-4 font-medium text-right">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr ng-if="usuarios.length === 0">
+                    <td colspan="4" class="text-center py-8 text-gray-500">Nenhum usuário cadastrado.</td>
+                </tr>
+                <tr ng-repeat="user in usuarios" class="border-b hover:bg-gray-50 transition">
+                    <td class="py-3 px-4 text-gray-800 font-medium">{{ user.login }}</td>
+                    <td class="py-3 px-4">
+                        <span ng-class="user.enable === 'Y' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'" 
+                              class="text-xs font-semibold px-2 py-1 rounded-full">
+                            {{ user.enable === 'Y' ? 'Ativo' : 'Inativo' }}
+                        </span>
+                    </td>
+                    <td class="py-3 px-4 text-sm text-gray-500">{{ user.created_at | date:'dd/MM/yyyy HH:mm' }}</td>
+                    <td class="py-3 px-4 text-right space-x-2">
+                        <button ng-click="editarUsuario(user)" class="text-blue-600 hover:text-blue-800" title="Editar Status">
+                            ✏️
+                        </button>
+                        <button ng-click="excluirUsuario(user.id)" class="text-red-600 hover:text-red-800" title="Excluir">
+                            🗑️
+                        </button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div ng-show="modoFormulario" class="max-w-md mx-auto mt-4">
+        <form name="userForm" ng-submit="salvarUsuario()" novalidate>
+            
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">E-mail (Login) *</label>
+                <input type="email" ng-model="usuarioAtual.email" required ng-disabled="usuarioAtual.id"
+                       class="w-full border-gray-300 rounded-md shadow-sm border p-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-500"
+                       placeholder="exemplo@dapsystem.com">
+                <p ng-show="usuarioAtual.id" class="text-xs text-gray-400 mt-1">O e-mail não pode ser alterado após a criação.</p>
+            </div>
+
+            <div class="mb-4" ng-if="!usuarioAtual.id">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Senha Provisória *</label>
+                <input type="password" ng-model="usuarioAtual.password" ng-required="!usuarioAtual.id"
+                       class="w-full border-gray-300 rounded-md shadow-sm border p-2 focus:ring-blue-500 focus:border-blue-500"
+                       placeholder="Mínimo de 6 caracteres">
+            </div>
+
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Status de Acesso</label>
+                <select ng-model="usuarioAtual.enable" required 
+                        class="w-full border-gray-300 rounded-md shadow-sm border p-2 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="Y">Ativo (Permitir Login)</option>
+                    <option value="N">Inativo (Bloquear Login)</option>
+                </select>
+            </div>
+
+            <div class="flex justify-end gap-3">
+                <button type="button" ng-click="voltarLista()" class="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded font-medium">
+                    Cancelar
+                </button>
+                <button type="submit" ng-disabled="userForm.$invalid" class="px-4 py-2 text-white bg-green-600 hover:bg-green-700 rounded font-medium disabled:opacity-50">
+                    💾 Salvar Usuário
+                </button>
+            </div>
+        </form>
+    </div>
+
+</div>
