@@ -11,6 +11,10 @@ app.config(['$routeProvider', function($routeProvider) {
             templateUrl: 'views/cliente-pj.html',
             controller: 'ClientePjCtrl'
         })
+        .when('/usuarios', {
+            templateUrl: 'views/usuarios.html',
+            controller: 'UsuariosCtrl'
+        })
         .otherwise({
             redirectTo: '/inicio'
         });
