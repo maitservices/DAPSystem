@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="pt-PT" ng-app="LoginApp">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DAP System - Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
+</head>
+<body class="bg-gray-100 h-screen flex items-center justify-center font-sans" ng-controller="LoginCtrl">
+
+    <div class="bg-white p-8 rounded-xl shadow-lg border border-gray-200 w-full max-w-md">
+        
+        <div class="text-center mb-8">
+            <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-600 text-white rounded-full text-3xl font-bold mb-4 shadow-md">
+                ⚙️
+            </div>
+            <h1 class="text-2xl font-bold text-gray-800">DAP System</h1>
+            <p class="text-gray-500 mt-1">Acesso seguro ao painel de gestão</p>
+        </div>
+
+        <form name="loginForm" ng-submit="autenticar()" novalidate>
+            
+            <div class="mb-5">
+                <label class="block text-sm font-medium text-gray-700 mb-1">E-mail corporativo</label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">✉️</span>
+                    <input type="email" ng-model="credenciais.email" required 
+                           class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="usuario@empresa.com">
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <div class="flex justify-between items-center mb-1">
+                    <label class="block text-sm font-medium text-gray-700">Palavra-passe</label>
+                    <a href="#" class="text-xs text-blue-600 hover:text-blue-800 hover:underline">Esqueci-me da senha</a>
+                </div>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">🔒</span>
+                    <input type="{{ mostrarSenha ? 'text' : 'password' }}" ng-model="credenciais.password" ng-change="avaliarForcaSenha()" required 
+                           class="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="••••••••">
+                    
+                    <button type="button" ng-click="mostrarSenha = !mostrarSenha" class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600">
+                        {{ mostrarSenha ? '👁️‍🗨️' : '👁️' }}
+                    </button>
+                </div>
+
+                <div class="mt-2" ng-show="credenciais.password.length > 0">
+                    <div class="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden flex">
+                        <div class="h-full transition-all duration-300" ng-class="forcaSenha.corClasses" ng-style="{'width': forcaSenha.percentual + '%'}"></div>
+                    </div>
+                    <p class="text-xs mt-1 text-right" ng-class="forcaSenha.textoCor">{{ forcaSenha.mensagem }}</p>
+                </div>
+            </div>
+
+            <div class="mb-6 flex justify-center">
+                <div class="border border-gray-200 bg-gray-50 rounded-lg px-4 py-2 flex items-center gap-3 w-full opacity-80 cursor-not-allowed">
+                    <div class="w-5 h-5 border-2 border-t-green-500 border-green-200 rounded-full animate-spin"></div>
+                    <span class="text-sm text-gray-600 font-medium">Verificação humana em background...</span>
+                    <span class="ml-auto text-xs text-gray-400">Secured</span>
+                </div>
+            </div>
+
+            <button type="submit" ng-disabled="loginForm.$invalid || processando" 
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-lg shadow transition duration-200 flex justify-center items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
+                <span ng-show="!processando">Entrar no Sistema</span>
+                <span ng-show="processando">Autenticando...</span>
+            </button>
+        </form>
+    </div>
+
+    <script src="login.js"></script>
+</body>
+</html>
