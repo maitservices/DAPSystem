@@ -74,4 +74,48 @@
             $scope.credenciais = {};
             $scope.carregando = false;
             $scope.mensagemErro = "";
-            $
+            $scope.botVerificado = false; // Só libera o login após validar o desafio
+
+            // Função chamada pelo widget anti-bot (Cloudflare/reCAPTCHA) quando o desafio é superado
+            $window.captchaVerificado = function(token) {
+                $scope.$apply(function() {
+                    $scope.botVerificado = true;
+                    $scope.captchaToken = token;
+                    console.log("Desafio Anti-Robô concluído. Token gerado.");
+                });
+            };
+
+            $scope.autenticar = function() {
+                if ($scope.loginForm.$invalid || !$scope.botVerificado) return;
+
+                $scope.carregando = true;
+                $scope.mensagemErro = "";
+
+                // SIMULAÇÃO DE CHAMADA PARA O SUPABASE AUTH API
+                $timeout(function() {
+                    // Aqui faremos o POST para a API do Supabase Auth no futuro, 
+                    // enviando $scope.credenciais.email, $scope.credenciais.password e o $scope.captchaToken
+                    
+                    if ($scope.credenciais.email === "admin@dapsystem.com" && $scope.credenciais.password === "123456") {
+                        // Simula sucesso: Salva um token falso e redireciona para a aplicação principal
+                        localStorage.setItem('dap_token', 'jwt_token_falso_para_teste');
+                        $window.location.href = 'index.html'; // Redireciona para o dashboard
+                    } else {
+                        // Simula erro de credenciais
+                        $scope.mensagemErro = "E-mail ou palavra-passe incorretos. Verifique suas credenciais.";
+                        $scope.carregando = false;
+                        
+                        // Reseta o captcha em caso de erro para forçar nova verificação
+                        $scope.botVerificado = false;
+                        if(typeof turnstile !== 'undefined') turnstile.reset();
+                    }
+                }, 1500); // Delay de 1.5s para simular carregamento real
+            };
+
+            $scope.esqueciSenha = function() {
+                alert("O módulo de recuperação de senha será desenvolvido na próxima sprint.");
+            };
+        }]);
+    </script>
+</body>
+</html>
