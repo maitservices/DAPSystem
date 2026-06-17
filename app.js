@@ -1,41 +1,90 @@
-// Definição do Módulo principal injetando o ngRoute
 var app = angular.module('DapSystemApp', ['ngRoute']);
 
-// Configuração das Rotas SPA
 app.config(['$routeProvider', function($routeProvider) {
     $routeProvider
         .when('/inicio', {
-            template: '<h2 class="text-2xl font-bold">Bem-vindo ao DAP System</h2><p class="mt-2 text-gray-600">Selecione uma opção no menu lateral.</p>'
+            template: '<div class="bg-white p-8 rounded-lg shadow-sm border border-gray-200"><h2 class="text-2xl font-bold text-gray-800">Visão Geral</h2><p class="mt-2 text-gray-600">Bem-vindo ao DAP System. Utilize o menu lateral para navegar pelos módulos disponíveis para o seu perfil.</p></div>'
         })
-        .when('/cliente-pj', {
-            templateUrl: 'views/cliente-pj.html',
-            controller: 'ClientePjCtrl'
-        })
-        .when('/usuarios', {
-            templateUrl: 'views/usuarios.html',
-            controller: 'UsuariosCtrl'
-        })
-        .otherwise({
-            redirectTo: '/inicio'
-        });
+        .when('/cliente-pj', { templateUrl: 'views/cliente-pj.html', controller: 'ClientePjCtrl' })
+        .when('/usuarios', { templateUrl: 'views/usuarios.html', controller: 'UsuariosCtrl' })
+        // Nota: As rotas futuras como /estoque/produtos devem ser mapeadas aqui à medida que forem desenvolvidas
+        .otherwise({ redirectTo: '/inicio' });
 }]);
 
-// Controlador Global (TopBar e Menu Utilizador)
-app.controller('MainCtrl', ['$scope', '$rootScope', '$timeout', function($scope, $rootScope, $timeout) {
+// Controlador Global e Gestor de Sessão
+app.controller('MainCtrl', ['$scope', '$rootScope', '$timeout', '$http', '$window', function($scope, $rootScope, $timeout, $http, $window) {
+    
+    // Configurações de Ambiente (Utilizando as suas chaves)
+    const SUPABASE_URL = 'https://kjmyzaiucwwcpilfslbl.supabase.co'; 
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtqbXl6YWl1Y3d3Y3BpbGZzbGJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyNzAzNDAsImV4cCI6MjA5Njg0NjM0MH0._bwZdWTek859ounKggqOQ1-Xl8LdbTsyTQ8ut8MBryc';
+    
     $scope.isUserMenuOpen = false;
     $scope.pageTitle = "Dashboard";
+    $scope.menusDinamicos = [];
+    $scope.usuarioLogado = "Carregando...";
 
+    // 1. Validação de Sessão Local
+    const token = localStorage.getItem('dap_token');
+    if (!token) {
+        $window.location.href = 'login.html'; // Expulsa se não tiver token
+        return;
+    }
+
+    // Decodifica o JWT localmente apenas para extrair o e-mail (UI/UX)
+    try {
+        const payloadBase64 = token.split('.')[1];
+        const payloadDecoded = JSON.parse(atob(payloadBase64));
+        $scope.usuarioLogado = payloadDecoded.email;
+    } catch (e) {
+        $scope.usuarioLogado = "Operador";
+    }
+
+    // Configuração do Cabeçalho Zero Trust
+    const httpConfig = {
+        headers: {
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY
+        }
+    };
+
+    // 2. Busca a Árvore de Menus Segura
+    $scope.carregarMenus = function() {
+        $http.post(`${SUPABASE_URL}/functions/v1/gerir-menus`, {}, httpConfig)
+            .then(function(response) {
+                if(response.data.sucesso) {
+                    $scope.menusDinamicos = response.data.arvore;
+                }
+            })
+            .catch(function(error) {
+                console.error("Erro ao carregar permissões:", error);
+                if(error.status === 401) $scope.logout(); // Token expirado ou inválido
+            });
+    };
+
+    // 3. Controles da Interface (Menu Lateral)
+    $scope.toggleMenuLateral = function(menu) {
+        // Se for um menu pai (sem rota direta), faz o efeito sanfona (accordion)
+        if (!menu.rota) {
+            menu.isOpen = !menu.isOpen;
+        }
+    };
+
+    // 4. Controles do Usuário
     $scope.toggleUserMenu = function() {
         $scope.isUserMenuOpen = !$scope.isUserMenuOpen;
     };
 
-    // Listener para fechar o menu ao clicar fora seria ideal aqui num cenário avançado
+    $scope.logout = function() {
+        localStorage.removeItem('dap_token');
+        $window.location.href = 'login.html';
+    };
 
-    // Serviço simples para mostrar mensagens globais
     $rootScope.mostrarMensagem = function(mensagem) {
         $scope.mensagemGlobal = mensagem;
-        $timeout(function() {
-            $scope.mensagemGlobal = "";
-        }, 4000); // Esconde após 4 segundos
+        $timeout(function() { $scope.mensagemGlobal = ""; }, 4000);
     };
+
+    // Inicializa a interface global
+    $scope.carregarMenus();
 }]);
