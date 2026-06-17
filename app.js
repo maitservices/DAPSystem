@@ -1,5 +1,39 @@
 var app = angular.module('DapSystemApp', ['ngRoute']);
 
+// Diretiva Customizada para Máscara de CNPJ
+app.directive('cnpjMask', function() {
+    return {
+        require: 'ngModel',
+        link: function(scope, element, attrs, ctrl) {
+            ctrl.$parsers.push(function(value) {
+                if (!value) return '';
+                
+                // Remove tudo o que não for número (Impede a digitação de letras)
+                var clean = value.replace(/[^0-9]/g, '');
+                var formatted = clean;
+
+                // Aplica as pontuações à medida que o tamanho aumenta
+                if (clean.length > 2) formatted = clean.replace(/^(\d{2})(\d)/, '$1.$2');
+                if (clean.length > 5) formatted = formatted.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
+                if (clean.length > 8) formatted = formatted.replace(/^(\d{2})\.(\d{3})\.(\d{3})(\d)/, '$1.$2.$3/$4');
+                if (clean.length > 12) formatted = formatted.replace(/^(\d{2})\.(\d{3})\.(\d{3})\/(\d{4})(\d)/, '$1.$2.$3/$4-$5');
+                
+                // Trava no limite máximo de 14 números (18 caracteres com a máscara)
+                if (clean.length >= 14) formatted = formatted.substring(0, 18);
+
+                // Se a visualização estiver diferente do que calculamos, atualiza a tela
+                if (formatted !== value) {
+                    ctrl.$setViewValue(formatted);
+                    ctrl.$render();
+                }
+
+                // Salva o valor formatado no banco de dados (ng-model)
+                return formatted;
+            });
+        }
+    };
+});
+
 // Configuração das Rotas SPA (Agora com os títulos embutidos)
 app.config(['$routeProvider', function($routeProvider) {
     $routeProvider
