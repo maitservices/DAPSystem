@@ -4,118 +4,82 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DAP System - Autenticação</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
     
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 </head>
-<body class="bg-gray-50 flex items-center justify-center h-screen font-sans" ng-controller="LoginCtrl">
+<body class="bg-slate-50 flex items-center justify-center h-screen font-sans" ng-controller="LoginCtrl">
 
-    <div class="w-full max-w-md bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
+    <div class="w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden transition-all duration-300">
         
-        <div class="bg-[#111827] px-8 py-6 text-center">
-            <h1 class="text-3xl font-bold text-white flex items-center justify-center gap-2">
-                <span class="bg-blue-600 p-1.5 rounded-lg text-xl">⚙️</span> DAP System
+        <div class="bg-[#111827] px-8 py-8 text-center">
+            <h1 class="text-3xl font-bold text-white flex items-center justify-center gap-2 tracking-tight">
+                <span class="bg-blue-600 p-2 rounded-xl text-xl shadow-md shadow-blue-900/50">⚙️</span> DAP System
             </h1>
-            <p class="text-gray-400 text-sm mt-2">Acesso restrito ao sistema de gestão</p>
+            <p class="text-slate-400 text-xs mt-2 uppercase tracking-widest font-semibold">Módulo de Desmonte de Sucatas</p>
         </div>
 
         <div class="p-8">
-            <div ng-show="mensagemErro" class="bg-red-50 text-red-600 p-3 rounded-md text-sm font-medium mb-4 text-center border border-red-200 transition-all">
+            
+            <div ng-show="mensagemErro" 
+                 class="bg-red-50 text-red-600 p-3.5 rounded-xl text-sm font-medium mb-5 text-center border border-red-100 shadow-sm transition-all duration-300">
                 {{ mensagemErro }}
             </div>
 
-            <form name="loginForm" ng-submit="autenticar()" novalidate>
+            <form name="loginForm" ng-submit="autenticar()" novalidate class="space-y-5">
                 
-                <div class="mb-5">
-                    <label class="block text-sm font-semibold text-gray-700 mb-1">E-mail corporativo</label>
-                    <input type="email" ng-model="credenciais.email" required
-                           class="w-full border-gray-300 rounded-md shadow-sm border p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
-                           placeholder="usuario@dapsystem.com.br"
-                           ng-disabled="carregando">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">E-mail Corporativo</label>
+                    <input type="email" ng-model="credenciais.email" required name="email"
+                           class="w-full border-slate-200 bg-slate-50 rounded-xl border p-3 text-sm font-medium outline-none transition focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:opacity-50"
+                           placeholder="nome@dapsystem.com"
+                           ng-disabled="processando">
                 </div>
 
-                <div class="mb-5">
-                    <div class="flex justify-between items-center mb-1">
-                        <label class="block text-sm font-semibold text-gray-700">Palavra-passe</label>
-                        <a href="#" ng-click="esqueciSenha()" class="text-xs text-blue-600 hover:text-blue-800 font-medium transition">
+                <div>
+                    <div class="flex justify-between items-center mb-1.5">
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Palavra-passe</label>
+                        <a href="#" ng-click="esqueciSenha()" 
+                           class="text-xs text-blue-600 hover:text-blue-800 font-semibold transition-colors duration-150">
                             Esqueceu a senha?
                         </a>
                     </div>
-                    <input type="password" ng-model="credenciais.password" required
-                           class="w-full border-gray-300 rounded-md shadow-sm border p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                    <input type="password" ng-model="credenciais.password" required name="password"
+                           class="w-full border-slate-200 bg-slate-50 rounded-xl border p-3 text-sm font-medium outline-none transition focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:opacity-50"
                            placeholder="••••••••"
-                           ng-disabled="carregando">
+                           ng-disabled="processando">
                 </div>
 
-                <div class="mb-6 flex justify-center">
+                <div class="pt-2 flex justify-center">
                     <div class="cf-turnstile" data-sitekey="1x00000000000000000000AA" data-callback="captchaVerificado"></div>
-                    </div>
+                </div>
 
-                <button type="submit" ng-disabled="loginForm.$invalid || carregando || !botVerificado" 
-                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md transition duration-200 flex justify-center items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
-                    <span ng-show="!carregando">Entrar no Sistema</span>
-                    <span ng-show="carregando" class="animate-pulse">Autenticando...</span>
-                </button>
+                <div class="grid grid-cols-3 gap-3 pt-4">
+                    <button type="button" ng-click="limpar()" ng-disabled="processando"
+                            class="col-span-1 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-3 px-4 rounded-xl text-sm transition-all duration-150 active:scale-95 disabled:opacity-50 disabled:pointer-events-none">
+                        Limpar
+                    </button>
+                    
+                    <button type="submit" ng-disabled="loginForm.$invalid || processando || !botVerificado" 
+                            class="col-span-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl text-sm shadow-md shadow-blue-500/10 transition-all duration-150 active:scale-95 flex justify-center items-center gap-2 disabled:opacity-50 disabled:pointer-events-none">
+                        <span ng-show="!processando">Entrar no Sistema</span>
+                        <span ng-show="processando" class="flex items-center gap-1.5 animate-pulse">
+                            Autenticando...
+                        </span>
+                    </button>
+                </div>
             </form>
         </div>
         
-        <div class="bg-gray-50 px-8 py-4 border-t text-center">
-            <p class="text-xs text-gray-500">
-                Acesso monitorizado e protegido. O uso não autorizado será registado.
+        <div class="bg-slate-50 px-8 py-4 border-t border-slate-100 text-center">
+            <p class="text-[11px] text-slate-400 font-medium">
+                Conexão segura ponta a ponta. Uso exclusivo para operadores autorizados.
             </p>
         </div>
     </div>
 
-    <script>
-        var app = angular.module('LoginApp', []);
-
-        app.controller('LoginCtrl', ['$scope', '$window', '$timeout', function($scope, $window, $timeout) {
-            $scope.credenciais = {};
-            $scope.carregando = false;
-            $scope.mensagemErro = "";
-            $scope.botVerificado = false; // Só libera o login após validar o desafio
-
-            // Função chamada pelo widget anti-bot (Cloudflare/reCAPTCHA) quando o desafio é superado
-            $window.captchaVerificado = function(token) {
-                $scope.$apply(function() {
-                    $scope.botVerificado = true;
-                    $scope.captchaToken = token;
-                    console.log("Desafio Anti-Robô concluído. Token gerado.");
-                });
-            };
-
-            $scope.autenticar = function() {
-                if ($scope.loginForm.$invalid || !$scope.botVerificado) return;
-
-                $scope.carregando = true;
-                $scope.mensagemErro = "";
-
-                // SIMULAÇÃO DE CHAMADA PARA O SUPABASE AUTH API
-                $timeout(function() {
-                    // Aqui faremos o POST para a API do Supabase Auth no futuro, 
-                    // enviando $scope.credenciais.email, $scope.credenciais.password e o $scope.captchaToken
-                    
-                    if ($scope.credenciais.email === "admin@dapsystem.com" && $scope.credenciais.password === "123456") {
-                        // Simula sucesso: Salva um token falso e redireciona para a aplicação principal
-                        localStorage.setItem('dap_token', 'jwt_token_falso_para_teste');
-                        $window.location.href = 'index.html'; // Redireciona para o dashboard
-                    } else {
-                        // Simula erro de credenciais
-                        $scope.mensagemErro = "E-mail ou palavra-passe incorretos. Verifique suas credenciais.";
-                        $scope.carregando = false;
-                        
-                        // Reseta o captcha em caso de erro para forçar nova verificação
-                        $scope.botVerificado = false;
-                        if(typeof turnstile !== 'undefined') turnstile.reset();
-                    }
-                }, 1500); // Delay de 1.5s para simular carregamento real
-            };
-
-            $scope.esqueciSenha = function() {
-                alert("O módulo de recuperação de senha será desenvolvido na próxima sprint.");
-            };
-        }]);
-    </script>
+    <script src="js/login.js"></script>
 </body>
 </html>
