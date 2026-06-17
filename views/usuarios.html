@@ -90,7 +90,18 @@
                        class="w-full border-gray-300 rounded-md shadow-sm border p-2 focus:ring-blue-500 focus:border-blue-500"
                        placeholder="Mínimo de 6 caracteres">
             </div>
-
+            <div class="mb-6">
+                <label class="block text-sm font-bold text-gray-700 mb-2">Papéis de Acesso (RBAC)</label>
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-3 bg-gray-50 p-4 border rounded-md">
+                    <label ng-repeat="perfil in listaPerfis" class="flex items-center space-x-2 cursor-pointer">
+                        <input type="checkbox" 
+                               ng-checked="usuarioAtual.perfis.indexOf(perfil.id) > -1"
+                               ng-click="togglePerfil(perfil.id)"
+                               class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                        <span class="text-sm text-gray-700">{{ perfil.nome }}</span>
+                    </label>
+                </div>
+            </div>
             <div class="mb-6">
                 <label class="block text-sm font-medium text-gray-700 mb-1">Status de Acesso</label>
                 <select ng-model="usuarioAtual.enable" required 
