@@ -1,101 +1,140 @@
 app.controller('UsuariosCtrl', ['$scope', '$rootScope', '$http', function($scope, $rootScope, $http) {
-    // Título no Topbar
     $scope.$parent.pageTitle = "Configurações > Usuários";
 
-    // Controle de estado da tela
-    $scope.modoFormulario = false;
-    $scope.usuarioAtual = {};
+    // URLs e Configurações da API
+    const SUPABASE_URL = 'SUA_URL_DO_SUPABASE'; 
+    const SUPABASE_ANON_KEY = 'SUA_CHAVE_ANON_KEY';
+    const EDGE_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/gerir-autenticacao`;
     
-    // Dados simulados para testar no GitHub Pages
-    $scope.usuarios = [
-        { id: '1a2b3c', login: 'admin@dapsystem.com', enable: 'Y', created_at: new Date().toISOString() },
-        { id: '4d5e6f', login: 'operador@dapsystem.com', enable: 'N', created_at: new Date().toISOString() }
-    ];
+    // Obtém o token real do usuário salvo no login
+    const JWT_TOKEN = localStorage.getItem('dap_token');
+
+    // Configuração do cabeçalho com o Token Zero Trust
+    const httpConfig = {
+        headers: {
+            'Authorization': 'Bearer ' + JWT_TOKEN,
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY
+        }
+    };
+
+    $scope.modoFormulario = false;
+    $scope.usuarioAtual = { perfis: [] };
+    $scope.usuarios = [];
+    $scope.listaEmpresas = [];
+    $scope.listaPerfis = [];
+    $scope.usuarioLogado = {}; 
 
     // ==========================================
-    // FUNÇÕES DE INTEGRAÇÃO (Preparadas para API)
+    // INICIALIZAÇÃO: Buscar dados reais
     // ==========================================
+    $scope.inicializar = function() {
+        // 1. Descobre quem é o utilizador logado decodificando o JWT (básico) ou consultando a API
+        // Em produção, isso pode vir do login e ficar no $rootScope.
+        
+        // 2. Carrega a lista de Perfis (Usando a API REST do Supabase direto, pois é só leitura pública/autenticada)
+        $http.get(`${SUPABASE_URL}/rest/v1/perfis?select=*`, httpConfig).then(function(res) {
+            $scope.listaPerfis = res.data;
+        });
+
+        // 3. Carrega a lista de Empresas (Para o combobox de Super Admins)
+        $http.get(`${SUPABASE_URL}/rest/v1/clientes_pj?select=id,razao_social,cnpj`, httpConfig).then(function(res) {
+            $scope.listaEmpresas = res.data;
+        }).catch(function() { 
+            // Se falhar por RLS, significa que o usuário não é Dono do Sistema, o que é seguro ignorar.
+        });
+
+        // 4. Carrega os Usuários chamando a Edge Function
+        $scope.carregarUsuarios();
+    };
 
     $scope.carregarUsuarios = function() {
-        // Lógica futura API:
-        /*
-        $http.post('URL_DA_EDGE_FUNCTION', { action: 'LISTAR' }).then(function(res) {
-            $scope.usuarios = res.data.dados;
+        $http.post(EDGE_FUNCTION_URL, { action: 'LISTAR' }, httpConfig)
+        .then(function(res) {
+            if(res.data.sucesso) {
+                $scope.usuarios = res.data.dados;
+            }
+        }).catch(function(err) {
+            console.error("Erro ao carregar usuários:", err);
+            $rootScope.mostrarMensagem("Erro de conexão com o servidor.");
         });
-        */
     };
 
     // ==========================================
-    // CONTROLES DE INTERFACE E CRUD (MOCK LOCAL)
+    // CONTROLES DE INTERFACE E CRUD
     // ==========================================
 
+    // Lógica para marcar/desmarcar checkboxes de múltiplos perfis
+    $scope.togglePerfil = function(perfilId) {
+        var idx = $scope.usuarioAtual.perfis.indexOf(perfilId);
+        if (idx > -1) {
+            $scope.usuarioAtual.perfis.splice(idx, 1); // Remove
+        } else {
+            $scope.usuarioAtual.perfis.push(perfilId); // Adiciona
+        }
+    };
+
     $scope.novoUsuario = function() {
-        $scope.usuarioAtual = { enable: 'Y' }; // Reseta o form com status padrão 'Y'
+        $scope.usuarioAtual = { enable: 'Y', perfis: [] }; 
         $scope.modoFormulario = true;
     };
 
     $scope.editarUsuario = function(user) {
-        // Faz uma cópia para não alterar a tabela antes de salvar
+        // Extrai apenas os IDs dos perfis a partir do retorno aninhado da API
+        var perfisIds = user.app_user_perfis ? user.app_user_perfis.map(p => p.perfis.id) : [];
+
         $scope.usuarioAtual = angular.copy({
             id: user.id,
-            email: user.login, // Na edição, o login é mapeado para o campo email
-            enable: user.enable
+            email: user.login,
+            enable: user.enable,
+            cliente_pj_id: user.cliente_pj_id,
+            perfis: perfisIds
         });
         $scope.modoFormulario = true;
     };
 
     $scope.voltarLista = function() {
         $scope.modoFormulario = false;
-        $scope.usuarioAtual = {};
+        $scope.usuarioAtual = { perfis: [] };
     };
 
     $scope.salvarUsuario = function() {
-        if ($scope.usuarioAtual.id) {
-            // ATUALIZAR STATUS (Mock)
-            var index = $scope.usuarios.findIndex(u => u.id === $scope.usuarioAtual.id);
-            if(index !== -1) {
-                $scope.usuarios[index].enable = $scope.usuarioAtual.enable;
-            }
-            $rootScope.mostrarMensagem("Status atualizado com sucesso!");
-        } else {
-            // CRIAR NOVO (Mock)
-            var novoMock = {
-                id: Math.random().toString(36).substr(2, 9), // ID falso
-                login: $scope.usuarioAtual.email,
-                enable: $scope.usuarioAtual.enable,
-                created_at: new Date().toISOString()
-            };
-            $scope.usuarios.unshift(novoMock); // Adiciona no topo da lista
-            $rootScope.mostrarMensagem("Usuário criado com sucesso!");
+        if ($scope.userForm.$invalid) {
+            alert("Preencha os campos obrigatórios.");
+            return;
         }
 
-        // Simulação API Edge Function (Futuro):
-        /*
-        var action = $scope.usuarioAtual.id ? 'ATUALIZAR' : 'CRIAR';
-        $http.post('URL_DA_EDGE_FUNCTION', { action: action, dados: $scope.usuarioAtual })
-            .then(function() {
-                $scope.carregarUsuarios();
-                $rootScope.mostrarMensagem("Processado com Sucesso.");
-            });
-        */
+        var payload = {
+            action: $scope.usuarioAtual.id ? 'ATUALIZAR' : 'CRIAR',
+            dados: $scope.usuarioAtual
+        };
 
-        $scope.voltarLista();
+        $http.post(EDGE_FUNCTION_URL, payload, httpConfig)
+            .then(function(res) {
+                if(res.data.sucesso) {
+                    $scope.voltarLista();
+                    $scope.carregarUsuarios();
+                    $rootScope.mostrarMensagem("Operação realizada com sucesso!");
+                }
+            })
+            .catch(function(err) {
+                alert("Erro: " + (err.data.erro || "Falha na comunicação"));
+            });
     };
 
     $scope.excluirUsuario = function(id) {
-        if (confirm("Tem a certeza que deseja excluir este usuário permanentemente?")) {
-            // EXCLUIR (Mock)
-            $scope.usuarios = $scope.usuarios.filter(u => u.id !== id);
-            $rootScope.mostrarMensagem("Usuário excluído.");
-
-            // Simulação API:
-            /*
-            $http.post('URL_DA_EDGE_FUNCTION', { action: 'EXCLUIR', dados: { id: id } })
-                .then(function() { $scope.carregarUsuarios(); });
-            */
+        if (confirm("Tem certeza que deseja excluir permanentemente este usuário?")) {
+            $http.post(EDGE_FUNCTION_URL, { action: 'EXCLUIR', dados: { id: id } }, httpConfig)
+                .then(function(res) {
+                    $scope.carregarUsuarios();
+                    $rootScope.mostrarMensagem("Usuário removido.");
+                })
+                .catch(function(err) {
+                    alert("Erro ao excluir: " + (err.data.erro || "Falha na comunicação"));
+                });
         }
     };
 
-    // Inicialização
-    $scope.carregarUsuarios();
+    // Arranque
+    $scope.inicializar();
 }]);
