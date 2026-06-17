@@ -1,19 +1,36 @@
 var app = angular.module('DapSystemApp', ['ngRoute']);
 
+// Configuração das Rotas SPA (Agora com os títulos embutidos)
 app.config(['$routeProvider', function($routeProvider) {
     $routeProvider
         .when('/inicio', {
-            template: '<div class="bg-white p-8 rounded-lg shadow-sm border border-gray-200"><h2 class="text-2xl font-bold text-gray-800">Visão Geral</h2><p class="mt-2 text-gray-600">Bem-vindo ao DAP System. Utilize o menu lateral para navegar pelos módulos disponíveis para o seu perfil.</p></div>'
+            template: '<div class="bg-white p-8 rounded-lg shadow-sm border border-gray-200"><h2 class="text-2xl font-bold text-gray-800">Visão Geral</h2><p class="mt-2 text-gray-600">Bem-vindo ao DAP System. Utilize o menu lateral para navegar pelos módulos disponíveis para o seu perfil.</p></div>',
+            title: 'Início'
         })
-        .when('/cliente-pj', { templateUrl: 'views/cliente-pj.html', controller: 'ClientePjCtrl' })
-        .when('/usuarios', { templateUrl: 'views/usuarios.html', controller: 'UsuariosCtrl' })
-        // Nota: As rotas futuras como /estoque/produtos devem ser mapeadas aqui à medida que forem desenvolvidas
+        .when('/cliente-pj', { 
+            templateUrl: 'views/cliente-pj.html', 
+            controller: 'ClientePjCtrl',
+            title: 'Administração > Empresa' // <- Título definido na rota
+        })
+        .when('/usuarios', { 
+            templateUrl: 'views/usuarios.html', 
+            controller: 'UsuariosCtrl',
+            title: 'Sistema > Usuários'      // <- Título definido na rota
+        })
         .otherwise({ redirectTo: '/inicio' });
 }]);
 
-// Controlador Global e Gestor de Sessão
+// Dentro do seu MainCtrl (Logo no início dele), adicione o listener:
 app.controller('MainCtrl', ['$scope', '$rootScope', '$timeout', '$http', '$window', function($scope, $rootScope, $timeout, $http, $window) {
     
+    // Escuta toda vez que uma rota muda com sucesso para atualizar o título global
+    $rootScope.$on('$routeChangeSuccess', function(event, current, previous) {
+        if (current.$$route && current.$$route.title) {
+            $rootScope.pageTitle = current.$$route.title;
+        } else {
+            $rootScope.pageTitle = "Dashboard";
+        }
+    });
     // Configurações de Ambiente (Utilizando as suas chaves)
     const SUPABASE_URL = 'https://kjmyzaiucwwcpilfslbl.supabase.co'; 
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtqbXl6YWl1Y3d3Y3BpbGZzbGJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyNzAzNDAsImV4cCI6MjA5Njg0NjM0MH0._bwZdWTek859ounKggqOQ1-Xl8LdbTsyTQ8ut8MBryc';
