@@ -1,7 +1,5 @@
 app.controller('ClientePjCtrl', ['$scope', '$http', '$rootScope', function($scope, $http, $rootScope) {
-    // Altera o título da página (Topbar)
-    $scope.$parent.pageTitle = "Catálogo > Cadastro Cliente PJ";
-
+   
     // O estado inicial é edição verdadeira para poder preencher um novo registo
     $scope.isEditing = true; 
     
