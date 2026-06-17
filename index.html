@@ -9,6 +9,114 @@
     <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular-route.min.js"></script>
     
     <style>
+        .ng-enter { transition: 0.3s linear all; opacity: 0; }
+        .ng-enter.ng-enter-active { opacity: 1; }
+        /* Suavidade na abertura do submenu */
+        .submenu-slide { transition: max-height 0.3s ease-in-out; overflow: hidden; }
+    </style>
+</head>
+<body class="bg-gray-100 flex h-screen overflow-hidden font-sans" ng-controller="MainCtrl">
+
+    <aside class="w-64 bg-[#111827] text-white flex flex-col shadow-xl z-20">
+        <div class="h-16 flex items-center px-6 border-b border-gray-800">
+            <span class="text-xl font-bold flex items-center gap-2 tracking-tight">
+                <span class="bg-blue-600 p-1.5 rounded-lg shadow-md text-lg">⚙️</span> DAP System
+            </span>
+        </div>
+        
+        <nav class="flex-1 px-4 py-6 overflow-y-auto space-y-1.5">
+            <a href="#!/inicio" class="block px-4 py-2.5 rounded-lg text-gray-300 font-medium hover:bg-gray-800 hover:text-white transition">
+                <span class="mr-2">🏠</span> Início
+            </a>
+
+            <div class="my-4 border-t border-gray-800"></div>
+
+            <div ng-repeat="menu in menusDinamicos" class="mb-1">
+                
+                <button ng-if="!menu.rota" ng-click="toggleMenuLateral(menu)" 
+                        class="w-full flex items-center justify-between px-4 py-2.5 rounded-lg text-gray-300 font-medium hover:bg-gray-800 hover:text-white transition focus:outline-none">
+                    <span class="flex items-center gap-2">
+                        <span>{{ menu.icone }}</span> 
+                        {{ menu.nome }}
+                    </span>
+                    <span class="text-xs transition-transform duration-200" ng-class="{'rotate-180': menu.isOpen}">▼</span>
+                </button>
+
+                <a ng-if="menu.rota && !menu.submenus.length" ng-href="{{ menu.rota }}" 
+                   class="flex items-center gap-2 px-4 py-2.5 rounded-lg text-gray-300 font-medium hover:bg-gray-800 hover:text-white transition">
+                    <span>{{ menu.icone }}</span> 
+                    {{ menu.nome }}
+                </a>
+
+                <div ng-show="menu.isOpen" class="ml-4 pl-3 mt-1 space-y-1 border-l border-gray-700 submenu-slide">
+                    <a ng-repeat="sub in menu.submenus" ng-href="{{ sub.rota }}"
+                       class="flex items-center gap-2 px-3 py-2 text-sm rounded-lg text-gray-400 hover:bg-gray-800 hover:text-white transition">
+                        <span>{{ sub.icone }}</span> 
+                        {{ sub.nome }}
+                    </a>
+                </div>
+            </div>
+        </nav>
+        
+        <div class="p-4 border-t border-gray-800">
+            <button ng-click="logout()" class="w-full text-left px-4 py-2 text-red-400 font-medium hover:bg-gray-800 rounded-lg transition flex items-center gap-2">
+                <span>🚪</span> Terminar Sessão
+            </button>
+        </div>
+    </aside>
+
+    <div class="flex-1 flex flex-col h-screen">
+        <header class="h-16 bg-white shadow-sm border-b flex items-center justify-between px-6 z-10">
+            <h1 class="text-xl font-bold text-gray-800">{{ pageTitle }}</h1>
+            
+            <div class="relative">
+                <button ng-click="toggleUserMenu()" class="flex items-center gap-3 text-gray-700 hover:text-blue-600 focus:outline-none transition">
+                    <div class="w-9 h-9 rounded-full bg-blue-100 border border-blue-200 flex items-center justify-center text-blue-700 font-bold uppercase shadow-sm">
+                        {{ usuarioLogado.charAt(0) }}
+                    </div>
+                    <span class="font-semibold text-sm">{{ usuarioLogado }}</span>
+                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+
+                <div ng-show="isUserMenuOpen" class="absolute right-0 mt-3 w-56 bg-white rounded-xl shadow-lg border border-gray-100 py-1 overflow-hidden transition">
+                    <div class="px-4 py-3 border-b border-gray-50">
+                        <p class="text-sm text-gray-900 font-semibold">Conta Conectada</p>
+                        <p class="text-xs text-gray-500 truncate" title="{{ usuarioLogado }}">{{ usuarioLogado }}</p>
+                    </div>
+                    <a href="#" class="block px-4 py-2.5 text-sm text-gray-700 font-medium hover:bg-slate-50 transition">⚙️ Configuração</a>
+                    <a href="#" class="block px-4 py-2.5 text-sm text-gray-700 font-medium hover:bg-slate-50 transition">🎭 Meu Perfil</a>
+                    <div class="border-t border-gray-100 my-1"></div>
+                    <button ng-click="logout()" class="w-full text-left px-4 py-2.5 text-sm font-bold text-red-600 hover:bg-red-50 transition">
+                        🚪 Logout Seguro
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <div ng-show="mensagemGlobal" class="bg-green-500 text-white text-center py-2.5 px-4 shadow-md font-semibold transition-all duration-300">
+            {{ mensagemGlobal }}
+        </div>
+
+        <main class="flex-1 overflow-x-hidden overflow-y-auto bg-slate-50 p-6">
+            <div ng-view></div>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+    <script src="js/cliente-pj.ctrl.js"></script>
+    <script src="js/usuarios.ctrl.js"></script>
+</body>
+</html><!DOCTYPE html>
+<html lang="pt-PT" ng-app="DapSystemApp">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DAP System - Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular-route.min.js"></script>
+    
+    <style>
         /* Pequenos ajustes para transições suaves */
         .ng-enter { transition: 0.3s linear all; opacity: 0; }
         .ng-enter.ng-enter-active { opacity: 1; }
