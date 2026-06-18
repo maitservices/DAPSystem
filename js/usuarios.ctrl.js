@@ -28,7 +28,7 @@ app.controller('UsuariosCtrl', ['$scope', '$rootScope', '$http', function($scope
 
     $scope.inicializar = function() {
        // 1. Carregar Perfis Seguros (Isso define o Nível do usuário)
-            const resPerfis = await $http.post(`${SUPABASE_URL}/functions/v1/gerir-perfis`, {}, httpConfig);
+            const resPerfis = await $http.post(`${SUPABASE_URL}/functions/v1/gerir-perfil`, {}, httpConfig);
             $scope.listaPerfisFiltrados = resPerfis.data.dados;
 
             // 2. Carregar Empresas (Apenas se for Super Admin - o backend validará isso)
