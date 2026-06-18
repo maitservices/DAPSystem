@@ -27,14 +27,14 @@ app.controller('UsuariosCtrl', ['$scope', '$rootScope', '$http', function($scope
     $scope.usuarioLogado = { nivel: 99, cliente_pj_id: null }; 
 
     $scope.inicializar = function() {
-        // Carrega Empresas
-        $http.get(`${SUPABASE_URL}/rest/v1/clientes_pj?select=id,razao_social,cnpj`, httpConfig).then(function(res) {
-            $scope.listaEmpresas = res.data;
-        }).catch(function() {}); 
+       // 1. Carregar Perfis Seguros (Isso define o Nível do usuário)
+            const resPerfis = await $http.post(`${SUPABASE_URL}/functions/v1/gerir-perfis`, {}, httpConfig);
+            $scope.listaPerfisFiltrados = resPerfis.data.dados;
 
-        // Carrega Perfis e DEPOIS carrega os Usuários
-        $http.get(`${SUPABASE_URL}/rest/v1/perfis?select=*`, httpConfig).then(function(res) {
-            $scope.listaPerfisOriginais = res.data;
+            // 2. Carregar Empresas (Apenas se for Super Admin - o backend validará isso)
+            const resEmpresas = await $http.post(`${SUPABASE_URL}/functions/v1/gerir-clientes-pj`, { action: 'LISTAR' }, httpConfig);
+            if(resEmpresas.data.sucesso) $scope.listaEmpresas = resEmpresas.data.dados;
+        
             $scope.carregarUsuarios(); 
         }).catch(function(err) {
             console.error("Erro ao carregar os perfis do banco:", err);
