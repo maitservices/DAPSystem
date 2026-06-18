@@ -1,14 +1,11 @@
 app.controller('UsuariosCtrl', ['$scope', '$rootScope', '$http', function($scope, $rootScope, $http) {
     
-    // URLs e Configurações da API
     const SUPABASE_URL = 'https://kjmyzaiucwwcpilfslbl.supabase.co'; 
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtqbXl6YWl1Y3d3Y3BpbGZzbGJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyNzAzNDAsImV4cCI6MjA5Njg0NjM0MH0._bwZdWTek859ounKggqOQ1-Xl8LdbTsyTQ8ut8MBryc';
     const EDGE_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/gerir-autenticacao`;
     
-    // Obtém o token real do usuário salvo no login
     const JWT_TOKEN = localStorage.getItem('dap_token');
 
-    // Configuração do cabeçalho com o Token Zero Trust
     const httpConfig = {
         headers: {
             'Authorization': 'Bearer ' + JWT_TOKEN,
@@ -21,29 +18,24 @@ app.controller('UsuariosCtrl', ['$scope', '$rootScope', '$http', function($scope
     $scope.usuarioAtual = { perfis: [] };
     $scope.usuarios = [];
     $scope.listaEmpresas = [];
-    $scope.listaPerfis = [];
+    
+    // Agora mantemos o histórico original e uma lista filtrada para os checkboxes
+    $scope.listaPerfisOriginais = []; 
+    $scope.listaPerfisFiltrados = []; 
+    
     $scope.usuarioLogado = {}; 
 
-    // ==========================================
-    // INICIALIZAÇÃO: Buscar dados reais
-    // ==========================================
     $scope.inicializar = function() {
-        // 1. Descobre quem é o utilizador logado decodificando o JWT (básico) ou consultando a API
-        // Em produção, isso pode vir do login e ficar no $rootScope.
         
-        // 2. Carrega a lista de Perfis (Usando a API REST do Supabase direto, pois é só leitura pública/autenticada)
         $http.get(`${SUPABASE_URL}/rest/v1/perfis?select=*`, httpConfig).then(function(res) {
-            $scope.listaPerfis = res.data;
+            $scope.listaPerfisOriginais = res.data;
+            // A filtragem acontecerá depois que a API retornar o nível do usuário logado
         });
 
-        // 3. Carrega a lista de Empresas (Para o combobox de Super Admins)
         $http.get(`${SUPABASE_URL}/rest/v1/clientes_pj?select=id,razao_social,cnpj`, httpConfig).then(function(res) {
             $scope.listaEmpresas = res.data;
-        }).catch(function() { 
-            // Se falhar por RLS, significa que o usuário não é Dono do Sistema, o que é seguro ignorar.
-        });
+        }).catch(function() {}); // Silencia erro se RLS bloquear
 
-        // 4. Carrega os Usuários chamando a Edge Function
         $scope.carregarUsuarios();
     };
 
@@ -52,34 +44,42 @@ app.controller('UsuariosCtrl', ['$scope', '$rootScope', '$http', function($scope
         .then(function(res) {
             if(res.data.sucesso) {
                 $scope.usuarios = res.data.dados;
+                
+                // CRÍTICO: Atualiza as informações de quem está logado com a verdade do Backend
+                $scope.usuarioLogado = res.data.callerContext;
+
+                // Dinamismo: Monta os Checkboxes apenas com papéis inferiores ao do usuário logado
+                $scope.listaPerfisFiltrados = $scope.listaPerfisOriginais.filter(function(perfil) {
+                    return perfil.nivel > $scope.usuarioLogado.nivel;
+                });
             }
         }).catch(function(err) {
-            console.error("Erro ao carregar usuários:", err);
             $rootScope.mostrarMensagem("Erro de conexão com o servidor.");
         });
     };
 
-    // ==========================================
-    // CONTROLES DE INTERFACE E CRUD
-    // ==========================================
-
-    // Lógica para marcar/desmarcar checkboxes de múltiplos perfis
     $scope.togglePerfil = function(perfilId) {
         var idx = $scope.usuarioAtual.perfis.indexOf(perfilId);
         if (idx > -1) {
-            $scope.usuarioAtual.perfis.splice(idx, 1); // Remove
+            $scope.usuarioAtual.perfis.splice(idx, 1);
         } else {
-            $scope.usuarioAtual.perfis.push(perfilId); // Adiciona
+            $scope.usuarioAtual.perfis.push(perfilId);
         }
     };
 
     $scope.novoUsuario = function() {
         $scope.usuarioAtual = { enable: 'Y', perfis: [] }; 
+        
+        // Se o criador tiver empresa, tranca o select na empresa dele.
+        // Se for nulo (Super Admin), deixamos o campo livre (undefined)
+        if ($scope.usuarioLogado.cliente_pj_id !== null) {
+            $scope.usuarioAtual.cliente_pj_id = $scope.usuarioLogado.cliente_pj_id;
+        }
+
         $scope.modoFormulario = true;
     };
 
     $scope.editarUsuario = function(user) {
-        // Extrai apenas os IDs dos perfis a partir do retorno aninhado da API
         var perfisIds = user.app_user_perfis ? user.app_user_perfis.map(p => p.perfis.id) : [];
 
         $scope.usuarioAtual = angular.copy({
@@ -134,6 +134,5 @@ app.controller('UsuariosCtrl', ['$scope', '$rootScope', '$http', function($scope
         }
     };
 
-    // Arranque
     $scope.inicializar();
 }]);
