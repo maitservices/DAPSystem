@@ -1,41 +1,56 @@
 var app = angular.module('DapSystemApp', ['ngRoute']);
 
-// Diretiva Customizada para Máscara de CNPJ
+// ==========================================
+// 1. DIRETIVAS CUSTOMIZADAS (Seu código intacto)
+// ==========================================
 app.directive('cnpjMask', function() {
     return {
         require: 'ngModel',
         link: function(scope, element, attrs, ctrl) {
             ctrl.$parsers.push(function(value) {
                 if (!value) return '';
-                
-                // Remove tudo o que não for número (Impede a digitação de letras)
                 var clean = value.replace(/[^0-9]/g, '');
                 var formatted = clean;
-
-                // Aplica as pontuações à medida que o tamanho aumenta
                 if (clean.length > 2) formatted = clean.replace(/^(\d{2})(\d)/, '$1.$2');
                 if (clean.length > 5) formatted = formatted.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
                 if (clean.length > 8) formatted = formatted.replace(/^(\d{2})\.(\d{3})\.(\d{3})(\d)/, '$1.$2.$3/$4');
                 if (clean.length > 12) formatted = formatted.replace(/^(\d{2})\.(\d{3})\.(\d{3})\/(\d{4})(\d)/, '$1.$2.$3/$4-$5');
-                
-                // Trava no limite máximo de 14 números (18 caracteres com a máscara)
                 if (clean.length >= 14) formatted = formatted.substring(0, 18);
-
-                // Se a visualização estiver diferente do que calculamos, atualiza a tela
                 if (formatted !== value) {
                     ctrl.$setViewValue(formatted);
                     ctrl.$render();
                 }
-
-                // Salva o valor formatado no banco de dados (ng-model)
                 return formatted;
             });
         }
     };
 });
 
-// Configuração das Rotas SPA (Agora com os títulos embutidos)
-app.config(['$routeProvider', function($routeProvider) {
+// ==========================================
+// 2. SEGURANÇA REATIVA: Interceptor HTTP
+// ==========================================
+// Ouve TODAS as respostas da API. Se qualquer módulo devolver 401 (Expirado/Inválido), expulsa o utilizador.
+app.factory('AuthInterceptor', ['$q', '$window', function($q, $window) {
+    return {
+        responseError: function(rejection) {
+            if (rejection.status === 401 || rejection.status === 403) {
+                console.warn("Acesso negado pela API. Sessão inválida ou expirada.");
+                localStorage.removeItem('dap_token');
+                $window.location.href = 'login.html';
+            }
+            return $q.reject(rejection);
+        }
+    };
+}]);
+
+// ==========================================
+// 3. CONFIGURAÇÕES: Rotas e Interceptores
+// ==========================================
+app.config(['$routeProvider', '$httpProvider', function($routeProvider, $httpProvider) {
+    
+    // Ativa o Interceptor de Segurança
+    $httpProvider.interceptors.push('AuthInterceptor');
+
     $routeProvider
         .when('/inicio', {
             template: '<div class="bg-white p-8 rounded-lg shadow-sm border border-gray-200"><h2 class="text-2xl font-bold text-gray-800">Visão Geral</h2><p class="mt-2 text-gray-600">Bem-vindo ao DAP System. Utilize o menu lateral para navegar pelos módulos disponíveis para o seu perfil.</p></div>',
@@ -44,20 +59,49 @@ app.config(['$routeProvider', function($routeProvider) {
         .when('/cliente-pj', { 
             templateUrl: 'views/cliente-pj.html', 
             controller: 'ClientePjCtrl',
-            title: 'Administração > Empresa' // <- Título definido na rota
+            title: 'Administração > Empresa'
         })
         .when('/usuarios', { 
             templateUrl: 'views/usuarios.html', 
             controller: 'UsuariosCtrl',
-            title: 'Sistema > Usuários'      // <- Título definido na rota
+            title: 'Sistema > Usuários'
         })
         .otherwise({ redirectTo: '/inicio' });
 }]);
 
-// Dentro do seu MainCtrl (Logo no início dele), adicione o listener:
-app.controller('MainCtrl', ['$scope', '$rootScope', '$timeout', '$http', '$window', function($scope, $rootScope, $timeout, $http, $window) {
+// ==========================================
+// 4. SEGURANÇA PROATIVA E EVENTOS GLOBAIS (Run Block)
+// ==========================================
+// O bloco 'run' executa antes da aplicação desenhar o ecrã. Movido o listener do Breadcrumb para cá.
+app.run(['$rootScope', '$window', function($rootScope, $window) {
     
-    // Escuta toda vez que uma rota muda com sucesso para atualizar o título global
+    // A. Guarda de Rotas: Valida o Token antes de trocar de página no menu
+    $rootScope.$on('$routeChangeStart', function(event, next, current) {
+        const token = localStorage.getItem('dap_token');
+        
+        if (!token) {
+            $window.location.href = 'login.html';
+            return;
+        }
+
+        try {
+            // Verifica a data de expiração (exp) dentro do JWT
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            const tempoAtualEmSegundos = Math.floor(Date.now() / 1000);
+            
+            if (payload.exp && tempoAtualEmSegundos >= payload.exp) {
+                console.warn("Sessão expirada por tempo. Por favor, faça login novamente.");
+                localStorage.removeItem('dap_token');
+                $window.location.href = 'login.html';
+                event.preventDefault(); // Trava a tentativa de abrir a página
+            }
+        } catch (e) {
+            localStorage.removeItem('dap_token');
+            $window.location.href = 'login.html';
+        }
+    });
+
+    // B. Caminho de Pão (Breadcrumbs): Atualiza o título dinamicamente após a rota carregar com sucesso
     $rootScope.$on('$routeChangeSuccess', function(event, current, previous) {
         if (current.$$route && current.$$route.title) {
             $rootScope.pageTitle = current.$$route.title;
@@ -65,32 +109,33 @@ app.controller('MainCtrl', ['$scope', '$rootScope', '$timeout', '$http', '$windo
             $rootScope.pageTitle = "Dashboard";
         }
     });
-    // Configurações de Ambiente (Utilizando as suas chaves)
+}]);
+
+// ==========================================
+// 5. CONTROLADOR GLOBAL (Regras de Interface)
+// ==========================================
+app.controller('MainCtrl', ['$scope', '$rootScope', '$timeout', '$http', '$window', function($scope, $rootScope, $timeout, $http, $window) {
+    
     const SUPABASE_URL = 'https://kjmyzaiucwwcpilfslbl.supabase.co'; 
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtqbXl6YWl1Y3d3Y3BpbGZzbGJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyNzAzNDAsImV4cCI6MjA5Njg0NjM0MH0._bwZdWTek859ounKggqOQ1-Xl8LdbTsyTQ8ut8MBryc';
     
     $scope.isUserMenuOpen = false;
-    $scope.pageTitle = "Dashboard";
     $scope.menusDinamicos = [];
     $scope.usuarioLogado = "Carregando...";
 
-    // 1. Validação de Sessão Local
     const token = localStorage.getItem('dap_token');
-    if (!token) {
-        $window.location.href = 'login.html'; // Expulsa se não tiver token
-        return;
-    }
 
-    // Decodifica o JWT localmente apenas para extrair o e-mail (UI/UX)
+    // Decodifica apenas para UI (A segurança pesada agora está no app.run)
     try {
-        const payloadBase64 = token.split('.')[1];
-        const payloadDecoded = JSON.parse(atob(payloadBase64));
-        $scope.usuarioLogado = payloadDecoded.email;
+        if (token) {
+            const payloadBase64 = token.split('.')[1];
+            const payloadDecoded = JSON.parse(atob(payloadBase64));
+            $scope.usuarioLogado = payloadDecoded.email;
+        }
     } catch (e) {
         $scope.usuarioLogado = "Operador";
     }
 
-    // Configuração do Cabeçalho Zero Trust
     const httpConfig = {
         headers: {
             'Authorization': 'Bearer ' + token,
@@ -99,8 +144,9 @@ app.controller('MainCtrl', ['$scope', '$rootScope', '$timeout', '$http', '$windo
         }
     };
 
-    // 2. Busca a Árvore de Menus Segura
     $scope.carregarMenus = function() {
+        if (!token) return; // Trava a execução se não houver token (evita erros no console)
+        
         $http.post(`${SUPABASE_URL}/functions/v1/gerir-menus`, {}, httpConfig)
             .then(function(response) {
                 if(response.data.sucesso) {
@@ -108,20 +154,17 @@ app.controller('MainCtrl', ['$scope', '$rootScope', '$timeout', '$http', '$windo
                 }
             })
             .catch(function(error) {
+                // Apenas exibe no log. Se for erro de sessão (401), o Interceptor Global já terá forçado o logout.
                 console.error("Erro ao carregar permissões:", error);
-                if(error.status === 401) $scope.logout(); // Token expirado ou inválido
             });
     };
 
-    // 3. Controles da Interface (Menu Lateral)
     $scope.toggleMenuLateral = function(menu) {
-        // Se for um menu pai (sem rota direta), faz o efeito sanfona (accordion)
         if (!menu.rota) {
             menu.isOpen = !menu.isOpen;
         }
     };
 
-    // 4. Controles do Usuário
     $scope.toggleUserMenu = function() {
         $scope.isUserMenuOpen = !$scope.isUserMenuOpen;
     };
