@@ -19,27 +19,23 @@ app.controller('UsuariosCtrl', ['$scope', '$rootScope', '$http', function($scope
     $scope.usuarios = [];
     $scope.listaEmpresas = [];
     
-    // Agora mantemos o histórico original e uma lista filtrada para os checkboxes
     $scope.listaPerfisOriginais = []; 
     $scope.listaPerfisFiltrados = []; 
     
-    $scope.usuarioLogado = {}; 
+    // 🛡️ PROTEÇÃO 1: Garante que o objeto existe na memória desde o milissegundo zero,
+    // evitando que a tela quebre antes mesmo da API responder.
+    $scope.usuarioLogado = { nivel: 99, cliente_pj_id: null }; 
 
     $scope.inicializar = function() {
-        
-        // 1. Carrega a lista de Empresas (Pode rodar em paralelo)
+        // Carrega Empresas
         $http.get(`${SUPABASE_URL}/rest/v1/clientes_pj?select=id,razao_social,cnpj`, httpConfig).then(function(res) {
             $scope.listaEmpresas = res.data;
         }).catch(function() {}); 
 
-        // 2. Carrega a lista de Perfis primeiro...
+        // Carrega Perfis e DEPOIS carrega os Usuários
         $http.get(`${SUPABASE_URL}/rest/v1/perfis?select=*`, httpConfig).then(function(res) {
             $scope.listaPerfisOriginais = res.data;
-            
-            // 3. CRÍTICO: Só chama os usuários DEPOIS que os perfis já estão na memória!
-            // Isso resolve a "Condição de Corrida".
-            $scope.carregarUsuarios();
-            
+            $scope.carregarUsuarios(); 
         }).catch(function(err) {
             console.error("Erro ao carregar os perfis do banco:", err);
         });
@@ -51,22 +47,23 @@ app.controller('UsuariosCtrl', ['$scope', '$rootScope', '$http', function($scope
             if(res.data.sucesso) {
                 $scope.usuarios = res.data.dados;
                 
-                // CRÍTICO: Garante que nunca é 'undefined', protegendo o filtro de causar um TypeError no Javascript
-                $scope.usuarioLogado = res.data.callerContext || { nivel: 99, cliente_pj_id: null };
+                // 🛡️ PROTEÇÃO 2: Só atualiza os dados do logado se a API realmente os enviou
+                if (res.data.callerContext) {
+                    $scope.usuarioLogado = res.data.callerContext;
+                }
 
-                // Dinamismo: Monta os Checkboxes apenas com papéis inferiores ao do usuário logado
+                // Filtragem segura (agora é impossível dar erro de 'undefined')
                 $scope.listaPerfisFiltrados = $scope.listaPerfisOriginais.filter(function(perfil) {
                     return perfil.nivel > $scope.usuarioLogado.nivel;
                 });
             }
         }).catch(function(err) {
-            // Garante inicialização vazia e segura em caso de erro 400
+            console.error("Erro ao carregar usuários:", err);
+            $rootScope.mostrarMensagem("Erro de conexão com o servidor de usuários.");
+            
+            // 🛡️ PROTEÇÃO 3: Recuo defensivo em caso de Erro 400 da API
             $scope.usuarioLogado = { nivel: 99, cliente_pj_id: null };
             $scope.listaPerfisFiltrados = [];
-            
-            // Exibe o log para auditoria
-            console.error("Erro detalhado do servidor:", err.data ? err.data.erro : err);
-            $rootScope.mostrarMensagem("Erro de conexão com o servidor. Acesso restrito.");
         });
     };
 
@@ -82,9 +79,9 @@ app.controller('UsuariosCtrl', ['$scope', '$rootScope', '$http', function($scope
     $scope.novoUsuario = function() {
         $scope.usuarioAtual = { enable: 'Y', perfis: [] }; 
         
-        // Se o criador tiver empresa, tranca o select na empresa dele.
-        // Se for nulo (Super Admin), deixamos o campo livre (undefined)
-        if ($scope.usuarioLogado.cliente_pj_id !== null) {
+        // 🛡️ PROTEÇÃO 4: Navegação segura por propriedades (Optional Chaining Manual)
+        // Só define a empresa se a variável existir de fato.
+        if ($scope.usuarioLogado && $scope.usuarioLogado.cliente_pj_id) {
             $scope.usuarioAtual.cliente_pj_id = $scope.usuarioLogado.cliente_pj_id;
         }
 
@@ -129,7 +126,7 @@ app.controller('UsuariosCtrl', ['$scope', '$rootScope', '$http', function($scope
                 }
             })
             .catch(function(err) {
-                alert("Erro: " + (err.data.erro || "Falha na comunicação"));
+                alert("Erro: " + (err.data && err.data.erro ? err.data.erro : "Falha na comunicação"));
             });
     };
 
@@ -141,7 +138,7 @@ app.controller('UsuariosCtrl', ['$scope', '$rootScope', '$http', function($scope
                     $rootScope.mostrarMensagem("Usuário removido.");
                 })
                 .catch(function(err) {
-                    alert("Erro ao excluir: " + (err.data.erro || "Falha na comunicação"));
+                    alert("Erro ao excluir: " + (err.data && err.data.erro ? err.data.erro : "Falha na comunicação"));
                 });
         }
     };
