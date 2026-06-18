@@ -27,16 +27,22 @@ app.controller('UsuariosCtrl', ['$scope', '$rootScope', '$http', function($scope
 
     $scope.inicializar = function() {
         
-        $http.get(`${SUPABASE_URL}/rest/v1/perfis?select=*`, httpConfig).then(function(res) {
-            $scope.listaPerfisOriginais = res.data;
-            // A filtragem acontecerá depois que a API retornar o nível do usuário logado
-        });
-
+        // 1. Carrega a lista de Empresas (Pode rodar em paralelo)
         $http.get(`${SUPABASE_URL}/rest/v1/clientes_pj?select=id,razao_social,cnpj`, httpConfig).then(function(res) {
             $scope.listaEmpresas = res.data;
-        }).catch(function() {}); // Silencia erro se RLS bloquear
+        }).catch(function() {}); 
 
-        $scope.carregarUsuarios();
+        // 2. Carrega a lista de Perfis primeiro...
+        $http.get(`${SUPABASE_URL}/rest/v1/perfis?select=*`, httpConfig).then(function(res) {
+            $scope.listaPerfisOriginais = res.data;
+            
+            // 3. CRÍTICO: Só chama os usuários DEPOIS que os perfis já estão na memória!
+            // Isso resolve a "Condição de Corrida".
+            $scope.carregarUsuarios();
+            
+        }).catch(function(err) {
+            console.error("Erro ao carregar os perfis do banco:", err);
+        });
     };
 
     $scope.carregarUsuarios = function() {
