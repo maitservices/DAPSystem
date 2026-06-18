@@ -79,9 +79,7 @@ app.controller('UsuariosCtrl', ['$scope', '$rootScope', '$http', function($scope
     $scope.novoUsuario = function() {
         $scope.usuarioAtual = { enable: 'Y', perfis: [] }; 
         
-        // 🛡️ PROTEÇÃO 4: Navegação segura por propriedades (Optional Chaining Manual)
-        // Só define a empresa se a variável existir de fato.
-        if ($scope.usuarioLogado && $scope.usuarioLogado.cliente_pj_id) {
+       if ($scope.usuarioLogado.nivel !== 0 && $scope.usuarioLogado.cliente_pj_id) {
             $scope.usuarioAtual.cliente_pj_id = $scope.usuarioLogado.cliente_pj_id;
         }
 
