@@ -29,11 +29,11 @@ app.controller('UsuariosCtrl', ['$scope', '$rootScope', '$http', function($scope
     $scope.inicializar = function() {
        // 1. Carregar Perfis Seguros (Isso define o Nível do usuário)
             const resPerfis = await $http.post(`${SUPABASE_URL}/functions/v1/gerir-perfil`, {}, httpConfig);
-            $scope.listaPerfisFiltrados = resPerfis.data.dados;
+            $scope.listaPerfisFiltrados = resPerfis?.data.dados|| [];
 
             // 2. Carregar Empresas (Apenas se for Super Admin - o backend validará isso)
             const resEmpresas = await $http.post(`${SUPABASE_URL}/functions/v1/gerir-clientes-pj`, { action: 'LISTAR' }, httpConfig);
-            if(resEmpresas.data.sucesso) $scope.listaEmpresas = resEmpresas.data.dados;
+            if(resEmpresas.data.sucesso) $scope.listaEmpresas = resEmpresas?.data.dados || [];
         
             $scope.carregarUsuarios(); 
         }).catch(function(err) {
