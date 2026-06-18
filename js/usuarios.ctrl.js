@@ -51,8 +51,8 @@ app.controller('UsuariosCtrl', ['$scope', '$rootScope', '$http', function($scope
             if(res.data.sucesso) {
                 $scope.usuarios = res.data.dados;
                 
-                // CRÍTICO: Atualiza as informações de quem está logado com a verdade do Backend
-                $scope.usuarioLogado = res.data.callerContext;
+                // CRÍTICO: Garante que nunca é 'undefined', protegendo o filtro de causar um TypeError no Javascript
+                $scope.usuarioLogado = res.data.callerContext || { nivel: 99, cliente_pj_id: null };
 
                 // Dinamismo: Monta os Checkboxes apenas com papéis inferiores ao do usuário logado
                 $scope.listaPerfisFiltrados = $scope.listaPerfisOriginais.filter(function(perfil) {
@@ -60,7 +60,13 @@ app.controller('UsuariosCtrl', ['$scope', '$rootScope', '$http', function($scope
                 });
             }
         }).catch(function(err) {
-            $rootScope.mostrarMensagem("Erro de conexão com o servidor.");
+            // Garante inicialização vazia e segura em caso de erro 400
+            $scope.usuarioLogado = { nivel: 99, cliente_pj_id: null };
+            $scope.listaPerfisFiltrados = [];
+            
+            // Exibe o log para auditoria
+            console.error("Erro detalhado do servidor:", err.data ? err.data.erro : err);
+            $rootScope.mostrarMensagem("Erro de conexão com o servidor. Acesso restrito.");
         });
     };
 
