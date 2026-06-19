@@ -75,15 +75,35 @@ app.controller('UsuariosCtrl', ['$scope', '$rootScope', '$http', function($scope
         }
     };
 
+    // ========================================================
+    // AÇÃO: Preparar Escopo para Novo Usuário (Ajustado)
+    // ========================================================
     $scope.novoUsuario = function() {
-        $scope.usuarioAtual = { enable: 'Y', perfis: [] }; 
+        // 1. Inicializa o objeto com o status Ativo ('Y') e array de perfis vazio
+        $scope.usuarioAtual = { 
+            enable: 'Y', 
+            perfis: [] 
+        }; 
         
-        // Bloqueio seguro para PJs
-        if ($scope.usuarioLogado.nivel !== 0 && $scope.usuarioLogado.cliente_pj_id) {
+        // 2. REGRA DE UX SELECIONADA: Se quem está operando possui um vínculo empresarial,
+        // nós pré-selecionamos automaticamente a mesma empresa dele no formulário.
+        // Removemos a barreira de nível para permitir que até o Super Admin desfrute do auto-complete
+        // se ele tiver uma empresa padrão definida em seu perfil.
+        if ($scope.usuarioLogado && $scope.usuarioLogado.cliente_pj_id) {
             $scope.usuarioAtual.cliente_pj_id = $scope.usuarioLogado.cliente_pj_id;
+        } else {
+            // Fallback explícito: Garante que inicia limpo se for um admin sem empresa
+            $scope.usuarioAtual.cliente_pj_id = ""; 
         }
 
+        // 3. Força a abertura da view do formulário (Destrói a tabela no DOM via ng-if)
         $scope.modoFormulario = true;
+
+        // 4. GARANTIA DE MOTOR: Comunica ao AngularJS que o modelo foi alterado programaticamente.
+        // Isso evita problemas de delay assíncrono e força o <select> a renderizar o texto da empresa na hora.
+        if (!$scope.$$phase) {
+            $scope.$apply();
+        }
     };
 
     $scope.editarUsuario = function(user) {
