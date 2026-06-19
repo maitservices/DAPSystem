@@ -22,7 +22,7 @@ app.controller('UsuariosCtrl', ['$scope', '$rootScope', '$http', function($scope
     $scope.inicializar = async function() {
         try {
             // 1. Carregar Perfis
-            const resPerfis = await $http.post(`${SUPABASE_URL}/functions/v1/gerir-perfis`, {}, httpConfig);
+            const resPerfis = await $http.post(`${SUPABASE_URL}/functions/v1/gerir-perfil`, {}, httpConfig);
             if (resPerfis.data && resPerfis.data.sucesso) {
                 $scope.listaPerfisFiltrados = resPerfis.data.dados;
             } else {
