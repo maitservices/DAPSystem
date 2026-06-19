@@ -27,18 +27,37 @@ app.controller('UsuariosCtrl', ['$scope', '$rootScope', '$http', function($scope
     $scope.usuarioLogado = { nivel: 99, cliente_pj_id: null }; 
 
     $scope.inicializar = function() {
-       // 1. Carregar Perfis Seguros (Isso define o Nível do usuário)
-            const resPerfis = await $http.post(`${SUPABASE_URL}/functions/v1/gerir-perfil`, {}, httpConfig);
-            $scope.listaPerfisFiltrados = resPerfis?.data.dados|| [];
-
-            // 2. Carregar Empresas (Apenas se for Super Admin - o backend validará isso)
+       try {
+            // 1. Carregar Perfis
+            const resPerfis = await $http.post(`${SUPABASE_URL}/functions/v1/gerir-perfis`, {}, httpConfig);
+            
+            // Validação de segurança: Só acedemos a .dados se a API indicar sucesso
+            if (resPerfis.data && resPerfis.data.sucesso) {
+                $scope.listaPerfisFiltrados = resPerfis.data.dados;
+            } else {
+                console.warn("API de perfis retornou vazio ou erro:", resPerfis.data);
+                $scope.listaPerfisFiltrados = [];
+            }
+    
+            // 2. Carregar Empresas
             const resEmpresas = await $http.post(`${SUPABASE_URL}/functions/v1/gerir-clientes-pj`, { action: 'LISTAR' }, httpConfig);
-            if(resEmpresas.data.sucesso) $scope.listaEmpresas = resEmpresas?.data.dados || [];
-        
-            $scope.carregarUsuarios(); 
-        }).catch(function(err) {
-            console.error("Erro ao carregar os perfis do banco:", err);
-        });
+            
+            if (resEmpresas.data && resEmpresas.data.sucesso) {
+                $scope.listaEmpresas = resEmpresas.data.dados;
+            } else {
+                console.warn("API de empresas retornou vazio ou erro:", resEmpresas.data);
+                $scope.listaEmpresas = [];
+            }
+    
+            // 3. Carregar Usuários
+            $scope.carregarUsuarios();
+
+        } catch (err) {
+            // Se a API retornar erro 400 ou 500, o catch captura aqui
+            console.error("Erro fatal na inicialização:", err);
+            // Opcional: Avisar o utilizador
+            // $rootScope.mostrarMensagem("Erro ao carregar configurações do sistema.");
+        }
     };
 
     $scope.carregarUsuarios = function() {
