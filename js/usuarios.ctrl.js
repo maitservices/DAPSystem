@@ -1,88 +1,68 @@
 app.controller('UsuariosCtrl', ['$scope', '$rootScope', '$http', function($scope, $rootScope, $http) {
-    
     const SUPABASE_URL = 'https://kjmyzaiucwwcpilfslbl.supabase.co'; 
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtqbXl6YWl1Y3d3Y3BpbGZzbGJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyNzAzNDAsImV4cCI6MjA5Njg0NjM0MH0._bwZdWTek859ounKggqOQ1-Xl8LdbTsyTQ8ut8MBryc';
-    const EDGE_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/gerir-autenticacao`;
-    
     const JWT_TOKEN = localStorage.getItem('dap_token');
-
+    
+    // Config global das chamadas
     const httpConfig = {
         headers: {
             'Authorization': 'Bearer ' + JWT_TOKEN,
-            'Content-Type': 'application/json',
-            'apikey': SUPABASE_ANON_KEY
+            'Content-Type': 'application/json'
         }
     };
 
+    // Estados iniciais blindados
     $scope.modoFormulario = false;
     $scope.usuarioAtual = { perfis: [] };
     $scope.usuarios = [];
     $scope.listaEmpresas = [];
-    
     $scope.listaPerfisOriginais = []; 
     $scope.listaPerfisFiltrados = []; 
-    
-    // 🛡️ PROTEÇÃO 1: Garante que o objeto existe na memória desde o milissegundo zero,
-    // evitando que a tela quebre antes mesmo da API responder.
     $scope.usuarioLogado = { nivel: 99, cliente_pj_id: null }; 
 
-    $scope.inicializar = function() {
-       try {
+    $scope.inicializar = async function() {
+        try {
             // 1. Carregar Perfis
             const resPerfis = await $http.post(`${SUPABASE_URL}/functions/v1/gerir-perfis`, {}, httpConfig);
-            
-            // Validação de segurança: Só acedemos a .dados se a API indicar sucesso
             if (resPerfis.data && resPerfis.data.sucesso) {
                 $scope.listaPerfisFiltrados = resPerfis.data.dados;
             } else {
-                console.warn("API de perfis retornou vazio ou erro:", resPerfis.data);
                 $scope.listaPerfisFiltrados = [];
             }
-    
+
             // 2. Carregar Empresas
             const resEmpresas = await $http.post(`${SUPABASE_URL}/functions/v1/gerir-clientes-pj`, { action: 'LISTAR' }, httpConfig);
-            
             if (resEmpresas.data && resEmpresas.data.sucesso) {
                 $scope.listaEmpresas = resEmpresas.data.dados;
             } else {
-                console.warn("API de empresas retornou vazio ou erro:", resEmpresas.data);
                 $scope.listaEmpresas = [];
             }
-    
-            // 3. Carregar Usuários
+
+            // 3. Carrega Utilizadores
             $scope.carregarUsuarios();
 
         } catch (err) {
-            // Se a API retornar erro 400 ou 500, o catch captura aqui
-            console.error("Erro fatal na inicialização:", err);
-            // Opcional: Avisar o utilizador
-            // $rootScope.mostrarMensagem("Erro ao carregar configurações do sistema.");
+            console.error("Erro na inicialização:", err);
+            // Recupera caso a API falhe, não deixando a tela travada
+            $scope.listaEmpresas = [];
+            $scope.listaPerfisFiltrados = [];
         }
     };
 
     $scope.carregarUsuarios = function() {
-        $http.post(EDGE_FUNCTION_URL, { action: 'LISTAR' }, httpConfig)
+        $http.post(`${SUPABASE_URL}/functions/v1/gerir-autenticacao`, { action: 'LISTAR' }, httpConfig)
         .then(function(res) {
-            if(res.data.sucesso) {
-                $scope.usuarios = res.data.dados;
+            if(res.data && res.data.sucesso) {
+                $scope.usuarios = res.data.dados || [];
                 
-                // 🛡️ PROTEÇÃO 2: Só atualiza os dados do logado se a API realmente os enviou
                 if (res.data.callerContext) {
                     $scope.usuarioLogado = res.data.callerContext;
                 }
-
-                // Filtragem segura (agora é impossível dar erro de 'undefined')
-                $scope.listaPerfisFiltrados = $scope.listaPerfisOriginais.filter(function(perfil) {
-                    return perfil.nivel > $scope.usuarioLogado.nivel;
-                });
             }
         }).catch(function(err) {
             console.error("Erro ao carregar usuários:", err);
-            $rootScope.mostrarMensagem("Erro de conexão com o servidor de usuários.");
-            
-            // 🛡️ PROTEÇÃO 3: Recuo defensivo em caso de Erro 400 da API
+            $scope.usuarios = [];
             $scope.usuarioLogado = { nivel: 99, cliente_pj_id: null };
-            $scope.listaPerfisFiltrados = [];
+            $rootScope.mostrarMensagem("Erro de comunicação ao listar usuários.");
         });
     };
 
@@ -98,7 +78,8 @@ app.controller('UsuariosCtrl', ['$scope', '$rootScope', '$http', function($scope
     $scope.novoUsuario = function() {
         $scope.usuarioAtual = { enable: 'Y', perfis: [] }; 
         
-       if ($scope.usuarioLogado.nivel !== 0 && $scope.usuarioLogado.cliente_pj_id) {
+        // Bloqueio seguro para PJs
+        if ($scope.usuarioLogado.nivel !== 0 && $scope.usuarioLogado.cliente_pj_id) {
             $scope.usuarioAtual.cliente_pj_id = $scope.usuarioLogado.cliente_pj_id;
         }
 
@@ -115,6 +96,7 @@ app.controller('UsuariosCtrl', ['$scope', '$rootScope', '$http', function($scope
             cliente_pj_id: user.cliente_pj_id,
             perfis: perfisIds
         });
+        
         $scope.modoFormulario = true;
     };
 
@@ -134,9 +116,9 @@ app.controller('UsuariosCtrl', ['$scope', '$rootScope', '$http', function($scope
             dados: $scope.usuarioAtual
         };
 
-        $http.post(EDGE_FUNCTION_URL, payload, httpConfig)
+        $http.post(`${SUPABASE_URL}/functions/v1/gerir-autenticacao`, payload, httpConfig)
             .then(function(res) {
-                if(res.data.sucesso) {
+                if(res.data && res.data.sucesso) {
                     $scope.voltarLista();
                     $scope.carregarUsuarios();
                     $rootScope.mostrarMensagem("Operação realizada com sucesso!");
@@ -149,10 +131,12 @@ app.controller('UsuariosCtrl', ['$scope', '$rootScope', '$http', function($scope
 
     $scope.excluirUsuario = function(id) {
         if (confirm("Tem certeza que deseja excluir permanentemente este usuário?")) {
-            $http.post(EDGE_FUNCTION_URL, { action: 'EXCLUIR', dados: { id: id } }, httpConfig)
+            $http.post(`${SUPABASE_URL}/functions/v1/gerir-autenticacao`, { action: 'EXCLUIR', dados: { id: id } }, httpConfig)
                 .then(function(res) {
-                    $scope.carregarUsuarios();
-                    $rootScope.mostrarMensagem("Usuário removido.");
+                    if (res.data && res.data.sucesso) {
+                        $scope.carregarUsuarios();
+                        $rootScope.mostrarMensagem("Usuário removido.");
+                    }
                 })
                 .catch(function(err) {
                     alert("Erro ao excluir: " + (err.data && err.data.erro ? err.data.erro : "Falha na comunicação"));
@@ -160,5 +144,6 @@ app.controller('UsuariosCtrl', ['$scope', '$rootScope', '$http', function($scope
         }
     };
 
+    // Inicia a cadeia de eventos
     $scope.inicializar();
 }]);
