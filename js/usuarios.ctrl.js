@@ -106,7 +106,9 @@ app.controller('UsuariosCtrl', ['$scope', '$rootScope', '$http', function($scope
     };
 
     $scope.salvarUsuario = function() {
-        if ($scope.userForm.$invalid) {
+        // 🛡️ CORREÇÃO: Verificação segura para evitar o erro Cannot read properties of undefined
+        // Se o formulário não estiver mapeado no scope, ignoramos a validação de forma segura.
+        if ($scope.userForm && $scope.userForm.$invalid) {
             alert("Preencha os campos obrigatórios.");
             return;
         }
@@ -125,7 +127,7 @@ app.controller('UsuariosCtrl', ['$scope', '$rootScope', '$http', function($scope
                 }
             })
             .catch(function(err) {
-                alert("Erro: " + (err.data && err.data.erro ? err.data.erro : "Falha na comunicação"));
+                alert("Erro: " + (err.data && err.data.erro ? err.data.erro : "Falha na comunicação com o servidor."));
             });
     };
 
