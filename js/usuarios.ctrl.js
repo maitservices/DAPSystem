@@ -69,15 +69,6 @@ app.controller('UsuariosCtrl', ['$scope', '$rootScope', '$http', function($scope
         });
     };
 
-    $scope.togglePerfil = function(perfilId) {
-        var idx = $scope.usuarioAtual.perfis.indexOf(perfilId);
-        if (idx > -1) {
-            $scope.usuarioAtual.perfis.splice(idx, 1);
-        } else {
-            $scope.usuarioAtual.perfis.push(perfilId);
-        }
-    };
-
     // ========================================================
     // AÇÃO: Preparar Escopo para Novo Usuário (Ajustado)
     // ========================================================
@@ -110,14 +101,20 @@ app.controller('UsuariosCtrl', ['$scope', '$rootScope', '$http', function($scope
     };
 
     $scope.editarUsuario = function(user) {
-        var perfisIds = user.app_user_perfis ? user.app_user_perfis.map(p => p.perfis.id) : [];
+        // LÓGICA DE NEGÓCIO ATUALIZADA: 1 Usuário = 1 Papel de Acesso
+        // Extraímos com segurança apenas o ID do primeiro perfil (se existir).
+        var perfilPrincipalId = (user.app_user_perfis && user.app_user_perfis.length > 0) 
+            ? user.app_user_perfis[0].perfis.id 
+            : null;
 
         $scope.usuarioAtual = angular.copy({
             id: user.id,
             email: user.login,
             enable: user.enable,
             cliente_pj_id: user.cliente_pj_id,
-            perfis: perfisIds
+            // Inicializamos o array com o perfil único para que o ng-model="usuarioAtual.perfis[0]"
+            // leia e preencha o <select> automaticamente no front-end.
+            perfis: perfilPrincipalId ? [perfilPrincipalId] : []
         });
         
         $scope.modoFormulario = true;
@@ -135,6 +132,8 @@ app.controller('UsuariosCtrl', ['$scope', '$rootScope', '$http', function($scope
             alert("Preencha os campos obrigatórios.");
             return;
         }
+
+        //$scope.usuarioAtual.perfis.push(perfilId);
 
         var payload = {
             action: $scope.usuarioAtual.id ? 'ATUALIZAR' : 'CRIAR',
