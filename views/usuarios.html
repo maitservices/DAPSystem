@@ -80,14 +80,13 @@
                 <div ng-if="listaPerfisFiltrados.length === 0" class="text-sm text-amber-600 bg-amber-50 p-3 rounded border border-amber-200">
                     Você não possui nível hierárquico suficiente para atribuir papéis a outros usuários.
                 </div>
-                <div ng-if="listaPerfisFiltrados.length > 0" class="grid grid-cols-2 md:grid-cols-3 gap-3 bg-gray-50 p-4 border rounded-md">
-                    <label ng-repeat="perfil in listaPerfisFiltrados" class="flex items-center space-x-2 cursor-pointer">
-                        <input type="checkbox" 
-                               ng-checked="usuarioAtual.perfis.indexOf(perfil.id) > -1"
-                               ng-click="togglePerfil(perfil.id)"
-                               class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-                        <span class="text-sm text-gray-700">{{ perfil.nome }}</span>
-                    </label>
+                <div ng-if="listaPerfisFiltrados.length > 0" class="bg-gray-50 p-4 border rounded-md">
+                    <select ng-model="usuarioAtual.perfis[0]" 
+                            ng-options="perfil.id as perfil.nome for perfil in listaPerfisFiltrados"
+                            required
+                            class="w-full border-gray-300 rounded-md shadow-sm border p-2 focus:ring-blue-500 focus:border-blue-500 bg-white">
+                        <option value="">-- Selecione um Papel de Acesso --</option>
+                    </select>
                 </div>
             </div>
 
