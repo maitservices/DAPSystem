@@ -33,8 +33,9 @@ app.controller('UsuariosCtrl', ['$scope', '$rootScope', '$http', function($scope
             const resEmpresas = await $http.post(`${SUPABASE_URL}/functions/v1/gerir-clientes-pj`, { action: 'LISTAR' }, httpConfig);
             if (resEmpresas.data && resEmpresas.data.sucesso) {
                 $scope.listaEmpresas = resEmpresas.data.dados;
-                console.log($scope.listaEmpresas.length);
-                console.log($scope.listaEmpresas[0].id);
+                if($scope.listaEmpresas.length==1){
+                    $scope.usuarioLogado.cliente_pj_id=$scope.listaEmpresas[0].id;
+                }
             } else {
                 $scope.listaEmpresas = [];
             }
