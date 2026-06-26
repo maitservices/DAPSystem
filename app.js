@@ -66,7 +66,7 @@ app.config(['$routeProvider', '$httpProvider', function($routeProvider, $httpPro
             controller: 'UsuariosCtrl',
             title: 'Sistema > Usuários'
         })
-        .when('/venda-simples', { 
+        .when('/vendas/venda-simples', { 
             templateUrl: 'views/venda-simples.html', 
             controller: 'VendaSimplesCtrl',
             title: 'Vendas > Vendas Simples'
